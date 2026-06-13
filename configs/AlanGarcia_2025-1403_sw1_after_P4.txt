@@ -1,0 +1,76 @@
+! =============================================================================
+! CONFIGURACIÓN SWITCH SW1 — DESPUÉS DE APLICAR MITIGACIONES VTP
+! Estado seguro — Práctica #4 ITLA
+! =============================================================================
+
+! ─── VTP Seguro ───────────────────────────────────────────────────────────
+
+! Opción recomendada: VTPv3 modo Transparent
+vtp version 3
+vtp mode transparent
+! Si se usa dominio, agregar contraseña:
+! vtp password ITLA-S3gur1d@d-2024 secret
+
+! ─── VLANs configuradas manualmente (sin dependencia de VTP) ─────────────
+vlan 10
+ name USUARIOS
+vlan 20
+ name SERVIDORES
+vlan 30
+ name ADMINISTRACION
+vlan 99
+ name MANAGEMENT
+vlan 998
+ name QUARANTINE-UNUSED
+vlan 999
+ name NATIVE-TRUNK-UNUSED
+
+! ─── Trunk hardening (Gi0/1 hacia SW2) ────────────────────────────────────
+interface GigabitEthernet0/1
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport nonegotiate                    ! DTP DESACTIVADO
+ switchport trunk native vlan 999          ! VLAN nativa cambiada
+ switchport trunk allowed vlan 10,20,30,99 ! Solo VLANs necesarias
+
+! ─── Puertos de acceso seguros ────────────────────────────────────────────
+interface range FastEthernet0/1 - 8
+ switchport mode access
+ switchport access vlan 10
+ switchport nonegotiate               ! DTP DESACTIVADO
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+interface range FastEthernet0/9 - 16
+ switchport mode access
+ switchport access vlan 20
+ switchport nonegotiate
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security mac-address sticky
+ switchport port-security violation shutdown
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+
+! ─── Puertos no usados — apagados y en cuarentena ─────────────────────────
+interface range FastEthernet0/17 - 24
+ switchport mode access
+ switchport access vlan 998
+ switchport nonegotiate
+ shutdown
+
+! ─── Verificación: Ejecutar en el switch DESPUÉS de mitigar ──────────────
+! SW1# show vtp status
+!   VTP Operating Mode: Transparent      ← SEGURO
+!   VTP version running: 3
+!
+! SW1# show interfaces Fa0/1 switchport
+!   Administrative Mode: static access   ← NO trunk
+!   Negotiation of Trunking: Off         ← DTP DESACTIVADO
+!
+! SW1# show port-security
+!   Muestra MAC addresses aprendidas y límites

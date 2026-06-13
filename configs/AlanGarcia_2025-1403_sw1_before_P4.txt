@@ -1,0 +1,50 @@
+! =============================================================================
+! CONFIGURACIÓN SWITCH SW1 — ANTES DEL ATAQUE VTP
+! Estado inicial vulnerable — Práctica #4 ITLA
+! =============================================================================
+
+! ─── Configuración VTP (VULNERABLE) ───────────────────────────────────────
+
+! VTP en modo SERVER — VULNERABLE
+vtp mode server
+vtp domain ITLA-LAB
+vtp version 2
+! SIN contraseña VTP — PELIGROSO
+
+! ─── VLANs existentes ─────────────────────────────────────────────────────
+vlan 10
+ name USUARIOS
+vlan 20
+ name SERVIDORES
+vlan 30
+ name ADMINISTRACION
+vlan 99
+ name MANAGEMENT
+
+! ─── Interfaz trunk hacia SW2 (puerto Gi0/1) ──────────────────────────────
+interface GigabitEthernet0/1
+ switchport mode trunk
+ switchport trunk encapsulation dot1q
+ ! DTP activo — VULNERABLE (no tiene nonegotiate)
+
+! ─── Puertos de acceso (usuarios) ─────────────────────────────────────────
+interface range FastEthernet0/1 - 8
+ switchport mode access
+ switchport access vlan 10
+ ! Sin nonegotiate — VULNERABLE a DTP
+
+interface range FastEthernet0/9 - 16
+ switchport mode access
+ switchport access vlan 20
+
+! ─── Verificación: Ejecutar en el switch ANTES del ataque ─────────────────
+! SW1# show vtp status
+!   VTP Operating Mode: Server           ← VULNERABLE
+!   VTP Domain Name   : ITLA-LAB
+!   VTP Password      : (ninguna)        ← VULNERABLE
+!
+! SW1# show vlan brief
+!   10  USUARIOS           active    Fa0/1, Fa0/2...
+!   20  SERVIDORES         active    Fa0/9, Fa0/10...
+!   30  ADMINISTRACION     active
+!   99  MANAGEMENT         active
